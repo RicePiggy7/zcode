@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="240" viewBox="0 0 880 240" font-family="-apple-system, 'PingFang SC', 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101426"/>
+      <stop offset="1" stop-color="#1c1230"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5b8cff"/>
+      <stop offset="1" stop-color="#9b6bff"/>
+    </linearGradient>
+  </defs>
+  <rect width="880" height="240" rx="16" fill="url(#bg)"/>
+  <rect x="24" y="24" width="832" height="192" rx="12" fill="#ffffff08"/>
+  <text x="56" y="86" font-size="40" font-weight="700" fill="#ffffff">zcode</text>
+  <text x="56" y="124" font-size="19" fill="#c8cede">让其他 Agent 把 ZCode CLI 作为可持续对话的编码子 Agent</text>
+  <text x="56" y="156" font-size="15" fill="#8a93a8">代码探索 · 实现 · 修复 · 评审 · 测试 · 会话续接</text>
+  <rect x="56" y="178" width="150" height="26" rx="13" fill="url(#accent)"/>
+  <text x="76" y="196" font-size="13" font-weight="600" fill="#ffffff">ask_zcode.sh</text>
+  <g transform="translate(640,70)">
+    <rect x="0" y="0" width="180" height="44" rx="10" fill="#5b8cff22" stroke="#5b8cff88"/>
+    <text x="90" y="28" font-size="15" text-anchor="middle" fill="#aecbff">调用方 Agent</text>
+    <path d="M90 44 L90 62" stroke="#5b8cff" stroke-width="2"/>
+    <polygon points="84,60 96,60 90,70" fill="#5b8cff"/>
+    <rect x="0" y="70" width="180" height="44" rx="10" fill="#9b6bff22" stroke="#9b6bff88"/>
+    <text x="90" y="98" font-size="15" text-anchor="middle" fill="#d0bfff">ZCode CLI</text>
+  </g>
+</svg>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="360" viewBox="0 0 880 360" font-family="-apple-system, 'PingFang SC', 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#7f8aa8"/>
+    </marker>
+  </defs>
+  <rect width="880" height="360" rx="16" fill="#101426"/>
+  <style>
+    .box { fill: #ffffff0d; stroke: #5b8cff88; rx: 10; }
+    .txt { fill: #e6ebf7; font-size: 14px; }
+    .sub { fill: #8a93a8; font-size: 12px; }
+    .edge { stroke: #7f8aa8; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+  </style>
+  <rect class="box" x="40"  y="40"  width="180" height="52" rx="10"/>
+  <text class="txt" x="130" y="62"  text-anchor="middle">调用方 Agent</text>
+  <text class="sub" x="130" y="82"  text-anchor="middle">整理目标 / 标准 / 边界</text>
+
+  <rect class="box" x="350" y="40"  width="200" height="52" rx="10"/>
+  <text class="txt" x="450" y="62"  text-anchor="middle">ask_zcode.sh</text>
+  <text class="sub" x="450" y="82"  text-anchor="middle">委托提示词 + 附件</text>
+
+  <rect class="box" x="660" y="40"  width="180" height="52" rx="10"/>
+  <text class="txt" x="750" y="62"  text-anchor="middle">zcode app-server</text>
+  <text class="sub" x="750" y="82"  text-anchor="middle">会话 / 模型 / 授权</text>
+
+  <path class="edge" d="M220 66 L344 66"/>
+  <path class="edge" d="M550 66 L654 66"/>
+
+  <rect class="box" x="660" y="140" width="180" height="52" rx="10"/>
+  <text class="txt" x="750" y="162" text-anchor="middle">回合执行</text>
+  <text class="sub" x="750" y="182" text-anchor="middle">工具调用 · 进度事件</text>
+  <path class="edge" d="M750 92 L750 134"/>
+
+  <rect class="box" x="350" y="240" width="200" height="52" rx="10"/>
+  <text class="txt" x="450" y="262" text-anchor="middle">产物落盘</text>
+  <text class="sub" x="450" y="282" text-anchor="middle">result.md / result.json / events</text>
+  <path class="edge" d="M660 178 C560 178 560 240 556 254"/>
+
+  <rect class="box" x="40"  y="240" width="180" height="52" rx="10"/>
+  <text class="txt" x="130" y="262" text-anchor="middle">调用方验收</text>
+  <text class="sub" x="130" y="282" text-anchor="middle">读 output_path · 复核验证</text>
+  <path class="edge" d="M344 266 L226 266"/>
+
+  <rect class="box" x="40"  y="140" width="180" height="52" rx="10" stroke="#9b6bff88"/>
+  <text class="txt" x="130" y="162" text-anchor="middle">继续会话?</text>
+  <text class="sub" x="130" y="182" text-anchor="middle">--session sess_...</text>
+  <path class="edge" d="M130 234 L130 198"/>
+  <path class="edge" d="M226 166 C300 166 300 120 344 74" stroke-dasharray="5 4"/>
+</svg>
