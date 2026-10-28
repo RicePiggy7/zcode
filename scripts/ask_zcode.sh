@@ -34,6 +34,9 @@ Environment:
   ZCODE_SKILL_TIMEOUT          Overall turn timeout in seconds (default: 1800)
   ZCODE_SKILL_CREDENTIALS      Path to the shared credentials.json
                                (default: ~/.zcode/v2/credentials.json)
+  ZCODE_SKILL_ENV_FILE         Persistent defaults file (KEY=VALUE lines);
+                               default: ~/.config/zcode-skill/env. The calling
+                               environment takes precedence over this file.
 
 Output (on success):
   session_id=<sess_...>        Use with --session for follow-up calls
@@ -62,6 +65,30 @@ require_cmd() {
     echo "[ERROR] Missing required command: $1" >&2
     exit 1
   fi
+}
+
+load_env_file() {
+  # Persistent defaults: KEY=VALUE lines from the skill env file. The calling
+  # environment always wins — a key is only taken from the file when it is not
+  # already set. File-sourced model pins are recorded so resume runs can keep
+  # the session's own model instead of being hijacked by the stored default.
+  local file="$1" key value
+  [[ -f "$file" ]] || return 0
+  while IFS= read -r raw || [[ -n "$raw" ]]; do
+    key="${raw%%=*}"
+    [[ "$key" == "$raw" ]] && continue
+    key="$(printf '%s' "$key" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    value="${raw#*=}"
+    value="$(printf '%s' "$value" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    value="${value%\"}"; value="${value#\"}"
+    value="${value%\'}"; value="${value#\'}"
+    [[ -z "$key" ]] && continue
+    if [[ -z "${!key:-}" ]]; then
+      export "$key=$value"
+      [[ "$key" == "ZCODE_SKILL_MODEL" ]] && ZCODE_SKILL_MODEL_FROM_FILE=1
+    fi
+  done < "$file"
 }
 
 trim_whitespace() {
@@ -109,7 +136,10 @@ mime_for_image() {
   esac
 }
 
-# --- Parse arguments ---
+# --- Load persistent defaults, then parse arguments ---
+
+ZCODE_SKILL_MODEL_FROM_FILE=0
+load_env_file "${ZCODE_SKILL_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/zcode-skill/env}"
 
 workspace="${PWD}"
 task_text=""
@@ -704,10 +734,15 @@ if [[ -n "${ZCODE_SKILL_MODEL:-}" ]]; then
     level="${model_spec#*\$}"
     model_spec="${model_spec%%\$*}"
   fi
-  if ! pin_model "$model_spec" "$level"; then
+  if [[ "$was_resume" == "1" && "$ZCODE_SKILL_MODEL_FROM_FILE" == "1" ]]; then
+    # A stored default must not hijack a resumed session's own model; an
+    # explicitly exported ZCODE_SKILL_MODEL still applies (see else-branch).
+    echo "[zcode] resumed session keeps its own model (config-file pin ignored; export ZCODE_SKILL_MODEL to override)" >&2
+  elif ! pin_model "$model_spec" "$level"; then
     fail_run 1 "model pin failed ($model_spec): $LAST_RPC_ERROR"
+  else
+    echo "[zcode] model pinned to $model_spec" >&2
   fi
-  echo "[zcode] model pinned to $model_spec" >&2
 elif [[ "$was_resume" == "1" ]]; then
   echo "[zcode] resumed session keeps its own model" >&2
 else

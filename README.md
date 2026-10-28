@@ -115,6 +115,19 @@ ZCODE_SKILL_MODEL=account:bigmodel-individual-coding-plan/GLM-5.3-Flash$high \
 
 GLM 模型声明了思考档位；脚本会先尝试本机默认档位，被拒时按"用户指定 → 本机 Provider 配置 → high/max/low"的顺序逐个重试。
 
+### 持久化默认值
+
+不想每次都指定？把惯用值写进配置文件：
+
+```bash
+mkdir -p ~/.config/zcode-skill
+cat > ~/.config/zcode-skill/env <<'EOF'
+ZCODE_SKILL_MODEL=account:bigmodel-individual-coding-plan/GLM-5.3-Flash$max
+EOF
+```
+
+格式为 KEY=VALUE，支持 `#` 注释。优先级：**调用方环境变量 > 配置文件 > 自动选择**，所以临时覆盖只需在单次命令前加环境变量。注意两点：配置文件的模型固定值只作用于新会话，续接会话始终保留自己的模型（显式 export 的 `ZCODE_SKILL_MODEL` 仍可覆盖续接）；`ZCODE_SKILL_ENV_FILE` 可以更换文件路径。
+
 ## 常用参数
 
 | 参数 | 作用 |

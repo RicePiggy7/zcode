@@ -14,6 +14,7 @@ Behavior is controlled by environment variables:
 
 import json
 import os
+import signal
 import sys
 
 
@@ -61,6 +62,16 @@ def main():
     store = []
     ask_id = 1000
     seq = 0
+
+    def flush_assertions(*_args):
+        if assert_file:
+            with open(assert_file, "w", encoding="utf-8") as f:
+                f.write("\n".join(store) + "\n")
+        sys.exit(0)
+
+    # The wrapper kills this process on exit; flush assertions on the way down.
+    signal.signal(signal.SIGTERM, flush_assertions)
+    signal.signal(signal.SIGINT, flush_assertions)
 
     def next_ask_id():
         nonlocal ask_id

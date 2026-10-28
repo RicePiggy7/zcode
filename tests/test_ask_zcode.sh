@@ -107,7 +107,76 @@ one_test "default-model" 0 'MOCK_EXPECT_SET_MODEL=account:test-plan-individual-c
 # 5. Mid-turn permission ask is auto-allowed.
 one_test "permission-allow" 0 MOCK_ASK_PERMISSION=1
 
-# 6. Resume keeps the given session id.
+# 5b. Config-file pin applies to new sessions (model + thought level).
+work="$(mktemp -d)"
+mkdir -p "$work/bin"
+{ echo "#!/usr/bin/env bash"; echo "exec python3 \"$MOCK\""; } > "$work/bin/zcode"
+chmod +x "$work/bin/zcode"
+cat > "$work/credentials.json" <<'EOF'
+{"account-provider:coding-plan:account:test-plan-individual-coding-plan:account:42:api-key":"mock-key"}
+EOF
+cat > "$work/env" <<'EOF'
+# habitual defaults
+ZCODE_SKILL_MODEL = "account:test-plan-individual-coding-plan/GLM-Env$max"
+EOF
+(
+  cd "$work" &&
+  ZCODE_BIN="$work/bin/zcode" \
+  ZCODE_SKILL_STATE_HOME="$work/state" \
+  ZCODE_SKILL_CREDENTIALS="$work/credentials.json" \
+  ZCODE_SKILL_ENV_FILE="$work/env" \
+  ZCODE_SKILL_TIMEOUT=30 \
+  MOCK_EXPECT_SET_MODEL='account:test-plan-individual-coding-plan/GLM-Env' \
+  MOCK_EXPECT_THOUGHT=max \
+  MOCK_ASSERT_FILE="$work/assertions.txt" \
+  bash "$WRAPPER" "run the mock task" > "$work/stdout.log" 2> "$work/stderr.log"
+) ; rc=$?
+if [[ $rc -eq 0 ]]; then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  echo "FAIL [config-file-pin]: rc=$rc"; cat "$work/stderr.log"
+fi
+if [[ -f "$work/assertions.txt" ]] && ! grep -q '^FAIL:' "$work/assertions.txt"; then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1)); echo "FAIL [config-file-pin]: mock assertions"; cat "$work/assertions.txt" 2>/dev/null
+fi
+rm -rf "$work"
+
+# 6. Resume keeps the given session id; a config-file pin must NOT hijack it.
+work="$(mktemp -d)"
+mkdir -p "$work/bin"
+{ echo "#!/usr/bin/env bash"; echo "exec python3 \"$MOCK\""; } > "$work/bin/zcode"
+chmod +x "$work/bin/zcode"
+cat > "$work/credentials.json" <<'EOF'
+{"account-provider:coding-plan:account:test-plan-individual-coding-plan:account:42:api-key":"mock-key"}
+EOF
+cat > "$work/env" <<'EOF'
+ZCODE_SKILL_MODEL=account:test-plan-individual-coding-plan/GLM-Env$max
+EOF
+out="$work/stdout.log"
+(
+  cd "$work" &&
+  ZCODE_BIN="$work/bin/zcode" \
+  ZCODE_SKILL_STATE_HOME="$work/state" \
+  ZCODE_SKILL_CREDENTIALS="$work/credentials.json" \
+  ZCODE_SKILL_ENV_FILE="$work/env" \
+  ZCODE_SKILL_TIMEOUT=30 \
+  MOCK_SESSION_ID=sess_prev01 \
+  MOCK_ASSERT_NO_SETMODEL=1 \
+  MOCK_ASSERT_FILE="$work/assertions.txt" \
+  bash "$WRAPPER" "continue the task" --session sess_prev01 > "$out" 2> "$work/stderr.log"
+) ; rc=$?
+if [[ $rc -eq 0 ]] && grep -q "session_id=sess_prev01" "$out"; then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  echo "FAIL [resume]: rc=$rc stdout:"; cat "$out"; cat "$work/stderr.log"
+fi
+rm -rf "$work"
+
+# 6b. An explicitly exported ZCODE_SKILL_MODEL overrides a resumed session's model.
 work="$(mktemp -d)"
 mkdir -p "$work/bin"
 { echo "#!/usr/bin/env bash"; echo "exec python3 \"$MOCK\""; } > "$work/bin/zcode"
@@ -122,15 +191,23 @@ out="$work/stdout.log"
   ZCODE_SKILL_STATE_HOME="$work/state" \
   ZCODE_SKILL_CREDENTIALS="$work/credentials.json" \
   ZCODE_SKILL_TIMEOUT=30 \
+  ZCODE_SKILL_MODEL='account:test-plan-individual-coding-plan/GLM-Explicit$low' \
   MOCK_SESSION_ID=sess_prev01 \
+  MOCK_EXPECT_SET_MODEL='account:test-plan-individual-coding-plan/GLM-Explicit' \
+  MOCK_EXPECT_THOUGHT=low \
   MOCK_ASSERT_FILE="$work/assertions.txt" \
   bash "$WRAPPER" "continue the task" --session sess_prev01 > "$out" 2> "$work/stderr.log"
 ) ; rc=$?
-if [[ $rc -eq 0 ]] && grep -q "session_id=sess_prev01" "$out"; then
+if [[ $rc -eq 0 ]]; then
   pass=$((pass + 1))
 else
   fail=$((fail + 1))
-  echo "FAIL [resume]: rc=$rc stdout:"; cat "$out"; cat "$work/stderr.log"
+  echo "FAIL [resume-explicit-pin]: rc=$rc stdout:"; cat "$out"; cat "$work/stderr.log"
+fi
+if grep -q '^FAIL:' "$work/assertions.txt" 2>/dev/null; then
+  fail=$((fail + 1)); echo "FAIL [resume-explicit-pin]: mock assertions"; cat "$work/assertions.txt"
+else
+  pass=$((pass + 1))
 fi
 rm -rf "$work"
 

@@ -154,3 +154,13 @@ Markdown 结果包含：
 - `ZCODE_SKILL_TIMEOUT`：回合超时秒数，默认 1800。
 - `ZCODE_SKILL_CREDENTIALS`：共享凭据存储路径，默认 `~/.zcode/v2/credentials.json`。
 - `ZCODE_CREDENTIAL_SECRET`：凭据解密密钥，仅当本机未使用默认回退方案时需要。
+
+## 持久化默认值
+
+惯用的模型与超时可以写入配置文件，避免每次显式指定：
+
+```bash
+~/.config/zcode-skill/env
+```
+
+格式为 KEY=VALUE（支持 `#` 注释与引号），常用键为 `ZCODE_SKILL_MODEL` 与 `ZCODE_SKILL_TIMEOUT`。优先级为：调用方环境变量 > 配置文件 > 内置默认。配置文件里的模型固定值只作用于新会话；续接会话始终保留自己的模型，除非在调用环境中显式 export `ZCODE_SKILL_MODEL`。路径可用 `ZCODE_SKILL_ENV_FILE` 覆盖。
