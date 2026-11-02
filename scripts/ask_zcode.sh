@@ -355,6 +355,52 @@ write_result() {
 
 # --- Start the app-server and the frame responder ---
 
+# Ignore SIGPIPE: a write to the fifo after the server died must surface as an
+# EPIPE error handled by our liveness checks, not kill the script with 141.
+trap '' PIPE
+
+# The server resolves its bundled provider table from this env var; the desktop
+# host sets it for its own children, but a standalone launch may lack it — then
+# the server guesses app-relative paths, fails and exits at startup.
+if [[ -z "${ZCODE_BUILTIN_PROVIDER_CONFIG_FILE:-}" ]]; then
+  for builtin_candidate in \
+    "/Applications/ZCode.app/Contents/Resources/config/provider/zcode-builtin.json" \
+    "/usr/local/lib/zcode/config/provider/zcode-builtin.json"; do
+    if [[ -f "$builtin_candidate" ]]; then
+      export ZCODE_BUILTIN_PROVIDER_CONFIG_FILE="$builtin_candidate"
+      break
+    fi
+  done
+fi
+
+# Launching zcode.cjs needs node on PATH; non-interactive shells may lack it
+# (nvm-style installs live under versioned directories). Scan common spots,
+# newest nvm version last; ZCODE_SKILL_NODE pins an explicit binary.
+if ! command -v node >/dev/null 2>&1; then
+  node_bin=""
+  if [[ -n "${ZCODE_SKILL_NODE:-}" && -x "$ZCODE_SKILL_NODE" ]]; then
+    node_bin="$ZCODE_SKILL_NODE"
+  else
+    for node_candidate in \
+      /opt/homebrew/bin/node \
+      /usr/local/bin/node \
+      /usr/bin/node \
+      $(ls -d "$HOME"/.nvm/versions/node/*/bin/node 2>/dev/null | sort -V | tail -1); do
+      if [[ -n "$node_candidate" && -x "$node_candidate" ]]; then
+        node_bin="$node_candidate"
+        break
+      fi
+    done
+  fi
+  if [[ -n "$node_bin" ]]; then
+    node_dir="$(dirname "$node_bin")"
+    case ":$PATH:" in
+      *":$node_dir:"*) : ;;
+      *) PATH="$node_dir:$PATH"; export PATH ;;
+    esac
+  fi
+fi
+
 fifo_path="$run_dir/server.in"
 mkfifo "$fifo_path"
 
@@ -368,6 +414,17 @@ exec 3>"$fifo_path"
 kill "$watchdog_pid" 2>/dev/null || true
 wait "$watchdog_pid" 2>/dev/null || true
 watchdog_pid=""
+
+# A server that exits right after opening its stdin (bad install, missing
+# provider table) would otherwise surface as a cryptic EPIPE later — fail now
+# with the server's own error instead.
+sleep 0.5
+if ! kill -0 "$server_pid" 2>/dev/null; then
+  echo "[ERROR] zcode app-server exited immediately at startup:" >&2
+  [[ -s "$stderr_path" ]] && sed 's/^/    /' "$stderr_path" >&2
+  [[ -s "$stderr_path" ]] || echo "    (no stderr output; see $protocol_path)" >&2
+  exit 1
+fi
 
 credentials_file="${ZCODE_SKILL_CREDENTIALS:-$HOME/.zcode/v2/credentials.json}"
 
@@ -516,7 +573,10 @@ rpc() {
     LAST_RPC_ERROR="failed to encode request frame for $method"
     return 1
   }
-  printf '%s\n' "$frame" >&3
+  if ! printf '%s\n' "$frame" >&3; then
+    LAST_RPC_ERROR="app-server pipe closed before replying to $method"
+    return 125
+  fi
   local deadline=$(( SECONDS + timeout_s ))
   while [[ ! -s "$resp_file" ]]; do
     if ! kill -0 "$server_pid" 2>/dev/null; then

@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WRAPPER="$SCRIPT_DIR/../scripts/ask_zcode.sh"
 MOCK="$SCRIPT_DIR/mock_app_server.py"
 
+# Isolate from the user's real ~/.config/zcode-skill/env; env-file-specific
+# cases override this inline with their own work-local file.
+TEST_EMPTY_ENV="$(mktemp)"
+: > "$TEST_EMPTY_ENV"
+export ZCODE_SKILL_ENV_FILE="$TEST_EMPTY_ENV"
+
 pass=0
 fail=0
 
