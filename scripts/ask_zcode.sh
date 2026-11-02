@@ -268,6 +268,10 @@ responder_pid=""
 LAST_RPC_ERROR=""
 
 cleanup() {
+  if [[ -n "$heartbeat_pid" ]]; then
+    kill "$heartbeat_pid" 2>/dev/null || true
+    wait "$heartbeat_pid" 2>/dev/null || true
+  fi
   if [[ -n "$responder_pid" ]]; then
     pkill -P "$responder_pid" 2>/dev/null || true
     kill "$responder_pid" 2>/dev/null || true
@@ -838,6 +842,23 @@ if ! rpc session/send "$send_params" 60; then
 fi
 
 # --- Wait for the turn to finish ---
+
+# Heartbeat on stderr so caller harnesses with idle/output timeouts do not
+# kill a quietly-running long turn. 0 disables.
+heartbeat_seconds="${ZCODE_SKILL_HEARTBEAT_SECONDS:-30}"
+heartbeat_pid=""
+if (( heartbeat_seconds > 0 )); then
+  (
+    set +e +u
+    hb=0
+    while :; do
+      sleep "$heartbeat_seconds" || break
+      hb=$((hb + heartbeat_seconds))
+      echo "[zcode] still running (${hb}s)" >&2
+    done
+  ) &
+  heartbeat_pid=$!
+fi
 
 turn_status=0
 deadline=$(( SECONDS + ${ZCODE_SKILL_TIMEOUT:-1800} ))

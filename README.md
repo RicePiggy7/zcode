@@ -159,6 +159,13 @@ EOF
 
 ZCode 返回"测试通过"不能替代调用方验收。调用方需要检查测试是否被删除、跳过或弱化，并重新运行仓库中的真实验证命令。
 
+### 运行指引（给调用方 Agent）
+
+- 回合可能持续数分钟到数十分钟：给足 Bash 超时，或以后台方式运行并轮询 `result_path`。
+- 进度在 stderr（`[zcode]` 前缀，含心跳行）；最终结果在 stdout 结尾的 key=value 行；产物在 `output_path` / `result_path`。
+- 退出码 0 = 成功；非 0 = 失败，读 `result_path` 定位原因。
+- 不要委托 ZCode 直接修改本 skill 正在运行的脚本；如需修改 skill 自身，先复制工作副本。
+
 ## 与 codex Skill 的差异
 
 | 能力 | oil-oil/codex | 本项目 |

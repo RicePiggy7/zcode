@@ -16,6 +16,7 @@ import json
 import os
 import signal
 import sys
+import time
 
 
 def emit(obj):
@@ -201,6 +202,9 @@ def main():
             event(sid, seq, "model.streaming", {"kind": "text_delta", "delta": "MOCK "})
             seq += 1
             event(sid, seq, "model.streaming", {"kind": "text_delta", "delta": "FINAL"})
+            delay = float(os.environ.get("MOCK_DELAY_TURN", "0") or 0)
+            if delay > 0:
+                time.sleep(delay)
             if fail_turn:
                 seq += 1
                 event(sid, seq, "turn.failed",

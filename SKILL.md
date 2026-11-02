@@ -139,6 +139,13 @@ Markdown 结果包含：
 
 续接会话保留原工作区上下文与模型配置。`--read-only` 不能与 `--session` 同时使用；需要受限权限时开启新会话。续接会话使用本机默认 ZCode 配置。
 
+## 给调用方 Agent 的运行指引
+
+- 委托回合可能持续数分钟到数十分钟。用足够长的超时运行包装脚本（默认回合超时 1800 秒，`ZCODE_SKILL_TIMEOUT` 可调）；宿主超时较短时以后台方式运行，然后轮询 `result_path` 直到 `result.json` 出现，再读取 `output_path`。
+- 有效进度写入 stderr（`[zcode]` 前缀，含工具调用行与约 30 秒一次的心跳行），最终结果以 key=value 行写在 stdout 结尾。不要依赖流式读取 stdout，也不要因短暂无输出而终止任务。
+- 退出码：0 成功；非 0 失败。失败时读取 `result_path` 的结构化状态，并用 `events_path` / `protocol.log` 定位原因。
+- 若委托的任务包含修改本 skill 自身的文件（SKILL.md、ask_zcode.sh 等），先把 skill 目录复制到工作副本再委托 `--workspace` 指向副本；直接改写正在执行的脚本会导致不可预期的行为。
+
 ## 失败处理
 
 - 非零退出码或 `turn.failed` 事件都视为失败。

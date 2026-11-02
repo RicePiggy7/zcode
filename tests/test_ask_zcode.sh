@@ -226,6 +226,32 @@ else
   echo "FAIL [resume-readonly-conflict]: expected non-zero exit"
 fi
 
+# 8. Long turns emit heartbeat lines on stderr.
+work="$(mktemp -d)"
+mkdir -p "$work/bin"
+{ echo "#!/usr/bin/env bash"; echo "exec python3 \"$MOCK\""; } > "$work/bin/zcode"
+chmod +x "$work/bin/zcode"
+cat > "$work/credentials.json" <<'EOF'
+{"account-provider:coding-plan:account:test-plan-individual-coding-plan:account:42:api-key":"mock-key"}
+EOF
+(
+  cd "$work" &&
+  ZCODE_BIN="$work/bin/zcode" \
+  ZCODE_SKILL_STATE_HOME="$work/state" \
+  ZCODE_SKILL_CREDENTIALS="$work/credentials.json" \
+  ZCODE_SKILL_TIMEOUT=30 \
+  ZCODE_SKILL_HEARTBEAT_SECONDS=1 \
+  MOCK_DELAY_TURN=2.5 \
+  bash "$WRAPPER" "run the mock task" > "$work/stdout.log" 2> "$work/stderr.log"
+) ; rc=$?
+if [[ $rc -eq 0 ]] && grep -q "still running" "$work/stderr.log"; then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  echo "FAIL [heartbeat]: rc=$rc stderr:"; cat "$work/stderr.log"
+fi
+rm -rf "$work"
+
 echo
 echo "passed: $pass  failed: $fail"
 [[ $fail -eq 0 ]]
